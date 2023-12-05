@@ -1,0 +1,13 @@
+PROCESS_1_FLAG: False       # Process 1 run when True
+PROCESS_2_FLAG: True        # Process 2 run When True
+
+# for Process 1
+GLOBAL_PATH_INDEX: 100      # Index of global path
+GOAL_INDEX: 10              # Initial index of local goal, Index to define local goals
+LOCAL_GOAL_DIST: 1          # Distance to update local goal
+LOCAL_GOAL_UPDATE_STEP: 10  # Index width when updating local goals
+
+# for Process 2
+GLOBAL_PATH_SPLIT: 0.75     # Determine the index of the global path
+GOAL_INDEX_2: 5             # Initial index of local goal, Index to define local goals
+
