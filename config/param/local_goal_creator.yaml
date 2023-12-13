@@ -1,4 +1,4 @@
-PROCESS_1_FLAG: True       # Process 1 run when True
+PROCESS_1_FLAG: True         # Process 1 run when True
 PROCESS_2_FLAG: False        # Process 2 run When True
 
 # for Process 1
