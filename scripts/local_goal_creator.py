@@ -2,41 +2,42 @@
 
 import rospy
 import math
-from geometry_msgs.msg import PoseStamped, PointStamped
+import tf_conversions
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 # from ros_gym_sfm.msg import two_dimensional_position
 
 class LocalGoalCreator:
     def __init__(self):
-        #parameter
-        self.HZ =  rospy.get_param("/HZ")
-        self.PROCESS_1_FLAG =  rospy.get_param("/PROCESS_1_FLAG")
-        self.PROCESS_2_FLAG =  rospy.get_param("/PROCESS_2_FLAG")
-        self.GLOBAL_PATH_INDEX =  rospy.get_param("/GLOBAL_PATH_INDEX")
-        self.GOAL_INDEX =  rospy.get_param("/GOAL_INDEX")
+        # parameter
+        self.HZ = rospy.get_param("/HZ")
+        self.PROCESS_1_FLAG = rospy.get_param("/PROCESS_1_FLAG")
+        self.PROCESS_2_FLAG = rospy.get_param("/PROCESS_2_FLAG")
+        self.GLOBAL_PATH_INDEX = rospy.get_param("/GLOBAL_PATH_INDEX")
+        self.GOAL_INDEX = rospy.get_param("/GOAL_INDEX")
         self.LOCAL_GOAL_DIST = rospy.get_param("/LOCAL_GOAL_DIST")
         self.LOCAL_GOAL_UPDATE_STEP = rospy.get_param("/LOCAL_GOAL_UPDATE_STEP")
         self.GLOBAL_PATH_SPLIT = rospy.get_param("/GLOBAL_PATH_SPLIT")
-        self.GOAL_INDEX_2 =  rospy.get_param("/GOAL_INDEX_2")
+        self.GOAL_INDEX_2 = rospy.get_param("/GOAL_INDEX_2")
 
-        #create instance
+        # create instance
         self.agent_pose = PoseStamped()
         self.agent_goal = PoseStamped()
         self.global_path = Path()
-        self.local_goal = PointStamped()
+        self.local_goal = PoseStamped()
 
         # frame_id
         self.local_goal.header.frame_id = "map"
 
-        #subscriber
+        # subscriber
         self.agent_pose_sub = rospy.Subscriber("ros_gym_sfm/agent_pose", PoseStamped, self.agent_pose_callback)
         self.agent_goal_sub = rospy.Subscriber("ros_gym_sfm/agent_goal", PoseStamped, self.agent_goal_callback)    
 
-        #publisher
+        # publisher
         self.global_path_pub = rospy.Publisher("ros_gym_sfm/global_path", Path, queue_size=10)  #for rviz debug
-        self.local_goal_pub = rospy.Publisher("ros_gym_sfm/local_goal", PointStamped, queue_size=10)  
+        self.local_goal_pub = rospy.Publisher("ros_gym_sfm/local_goal", PoseStamped, queue_size=10)  
 
-    #callback
+    # callback
     def agent_pose_callback(self, agent_pose):
         self.agent_pose.pose.position.x = agent_pose.pose.position.x
         self.agent_pose.pose.position.y = agent_pose.pose.position.y
@@ -47,8 +48,8 @@ class LocalGoalCreator:
         self.agent_goal.pose.position.y = agent_goal.pose.position.y
         self.goal_moving_flag = True
 
-    #global_path_creator
-    def global_path_creator_1(self, current_pose: PoseStamped, goal_pose: PoseStamped) -> Path:
+    # make_global_path
+    def make_global_path_1(self, current_pose: PoseStamped, goal_pose: PoseStamped) -> Path:
         global_path = Path()
         global_path.header.frame_id = "map"
         global_path.header.stamp = rospy.Time.now()
@@ -66,7 +67,7 @@ class LocalGoalCreator:
 
         return global_path
     
-    def global_path_creator_2(self, current_pose: PoseStamped, goal_pose: PoseStamped) -> Path:
+    def make_global_path_2(self, current_pose: PoseStamped, goal_pose: PoseStamped) -> Path:
         global_path = Path()
         global_path.header.frame_id = "map"
         global_path.header.stamp = rospy.Time.now()
@@ -90,23 +91,23 @@ class LocalGoalCreator:
            
         return global_path   
     
-    #initialize_local_goal
-    def initialize_local_goal_1(self, local_goal: PointStamped) -> PointStamped:
-        local_goal.point.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
-        local_goal.point.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
+    # initialize_local_goal
+    def initialize_local_goal_1(self, local_goal: PoseStamped) -> PoseStamped:
+        local_goal.pose.position.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
+        local_goal.pose.position.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
         self.initialize_local_goal_flag = False
 
         return local_goal
     
-    def initialize_local_goal_2(self, local_goal: PointStamped) -> PointStamped:
-        local_goal.point.x = self.global_path.poses[self.GOAL_INDEX_2].pose.position.x
-        local_goal.point.y = self.global_path.poses[self.GOAL_INDEX_2].pose.position.y
+    def initialize_local_goal_2(self, local_goal: PoseStamped) -> PoseStamped:
+        local_goal.pose.position.x = self.global_path.poses[self.GOAL_INDEX_2].pose.position.x
+        local_goal.pose.position.y = self.global_path.poses[self.GOAL_INDEX_2].pose.position.y
         self.initialize_local_goal_flag = False
 
         return local_goal
 
-    #make_local_goal
-    def make_local_goal_1(self, current_pose: PoseStamped, local_goal: PointStamped) -> PointStamped:
+    # make_local_goal
+    def make_local_goal_1(self, current_pose: PoseStamped, local_goal: PoseStamped) -> PoseStamped:
         dx = current_pose.pose.position.x - self.global_path.poses[self.GOAL_INDEX].pose.position.x
         dy = current_pose.pose.position.y - self.global_path.poses[self.GOAL_INDEX].pose.position.y
         dist = math.hypot(dx, dy)
@@ -115,23 +116,23 @@ class LocalGoalCreator:
             self.GOAL_INDEX += self.LOCAL_GOAL_UPDATE_STEP
 
             if self.GOAL_INDEX < len(self.global_path.poses):
-                local_goal.point.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
-                local_goal.point.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
+                local_goal.pose.position.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
+                local_goal.pose.position.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
             else:
                 self.GOAL_INDEX = len(self.global_path.poses) - 1
-                local_goal.point.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
-                local_goal.point.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
+                local_goal.pose.position.x = self.global_path.poses[self.GOAL_INDEX].pose.position.x
+                local_goal.pose.position.y = self.global_path.poses[self.GOAL_INDEX].pose.position.y
 
         return local_goal 
 
-    def make_local_goal_2(self, local_goal: PointStamped) -> PointStamped:
+    def make_local_goal_2(self, local_goal: PoseStamped) -> PoseStamped:
         if self.GOAL_INDEX_2 < self.global_path_index : 
-            local_goal.point.x = self.global_path.poses[self.GOAL_INDEX_2].pose.position.x
-            local_goal.point.y = self.global_path.poses[self.GOAL_INDEX_2].pose.position.y
+            local_goal.pose.position.x = self.global_path.poses[self.GOAL_INDEX_2].pose.position.x
+            local_goal.pose.position.y = self.global_path.poses[self.GOAL_INDEX_2].pose.position.y
         else:
             self.GOAL_INDEX_2 = self.global_path_index - 1
-            local_goal.point.x = self.global_path.poses[self.global_path_index - 1].pose.position.x
-            local_goal.point.y = self.global_path.poses[self.global_path_index - 1].pose.position.y
+            local_goal.pose.position.x = self.global_path.poses[self.global_path_index - 1].pose.position.x
+            local_goal.pose.position.y = self.global_path.poses[self.global_path_index - 1].pose.position.y
             self.make_local_goal_flag = False
 
         return local_goal 
@@ -141,7 +142,7 @@ class LocalGoalCreator:
     # local goal  : Updated when the distance between the current position and local goal is close
     def process_1(self):
         if self.making_path_flag == False:
-            self.global_path = self.global_path_creator_1(self.agent_pose, self.agent_goal)
+            self.global_path = self.make_global_path_1(self.agent_pose, self.agent_goal)
             self.making_path_flag = True
 
         self.global_path_pub.publish(self.global_path)
@@ -150,6 +151,12 @@ class LocalGoalCreator:
             self.local_goal = self.initialize_local_goal_1(self.local_goal)
 
         self.local_goal = self.make_local_goal_1(self.agent_pose, self.local_goal)
+        self.local_goal.pose.orientation.w = 1.0
+        local_goal_q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.pi/2)
+        self.local_goal.pose.orientation.x = local_goal_q[0]
+        self.local_goal.pose.orientation.y = local_goal_q[1]
+        self.local_goal.pose.orientation.z = local_goal_q[2]
+        self.local_goal.pose.orientation.w = local_goal_q[3]
 
         self.local_goal.header.stamp = rospy.Time.now()
         self.local_goal_pub.publish(self.local_goal)
@@ -158,7 +165,7 @@ class LocalGoalCreator:
     # global path : Always update
     # local goal  : Keep placing local goal on the global path
     def process_2(self):
-        self.global_path = self.global_path_creator_2(self.agent_pose, self.agent_goal)
+        self.global_path = self.make_global_path_2(self.agent_pose, self.agent_goal)
 
         self.global_path_pub.publish(self.global_path)
 
@@ -167,6 +174,12 @@ class LocalGoalCreator:
         
         if self.make_local_goal_flag == True:
             self.local_goal = self.make_local_goal_2(self.local_goal)
+            self.local_goal.pose.orientation.w = 1.0
+            local_goal_q = tf_conversions.transformations.quaternion_from_euler(0, 0, math.pi/2)
+            self.local_goal.pose.orientation.x = local_goal_q[0]
+            self.local_goal.pose.orientation.y = local_goal_q[1]
+            self.local_goal.pose.orientation.z = local_goal_q[2]
+            self.local_goal.pose.orientation.w = local_goal_q[3]
 
         self.local_goal.header.stamp = rospy.Time.now()
         self.local_goal_pub.publish(self.local_goal)
