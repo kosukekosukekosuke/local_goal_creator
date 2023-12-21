@@ -34,8 +34,8 @@ class LocalGoalCreator:
         self.agent_goal_sub = rospy.Subscriber("ros_gym_sfm/agent_goal", PoseStamped, self.agent_goal_callback)    
 
         # publisher
-        self.global_path_pub = rospy.Publisher("ros_gym_sfm/global_path", Path, queue_size=10)  #for rviz debug
-        self.local_goal_pub = rospy.Publisher("ros_gym_sfm/local_goal", PoseStamped, queue_size=10)  
+        self.global_path_pub = rospy.Publisher("ros_gym_sfm/global_path", Path, queue_size=1)  #for rviz debug
+        self.local_goal_pub = rospy.Publisher("ros_gym_sfm/local_goal", PoseStamped, queue_size=1)  
 
     # callback
     def agent_pose_callback(self, agent_pose):
